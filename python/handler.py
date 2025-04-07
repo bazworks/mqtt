@@ -5,7 +5,6 @@ import certifi
 import json
 import msgpack
 import logging
-from time import time
 import uuid
 
 
@@ -23,7 +22,7 @@ class MQTTHandler:
     _ENCODING = 'msgpack'
     
 
-    def __init__(self, host=None, port=None, username=None, password=None, transport=None, encoding=None, result_topic=None, error_topic=None):
+    def __init__(self, host=None, port=None, username=None, password=None, transport=None, encoding=None):
         self.MQTT_HOST = host or self._MQTT_HOST
         self.MQTT_PORT = port or self._MQTT_PORT
         self.MQTT_USERNAME = username or self._MQTT_USERNAME
@@ -113,7 +112,7 @@ class MQTTHandler:
 
     def disconnect(self):
         """Wrapper for the client's disconnect method"""
-        return self.client.disconnect()
+        return self.client.disconnect() if self.client else None
 
     def is_connected(self):
         """Wrapper for the client's is_connected method"""

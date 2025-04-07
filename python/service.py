@@ -5,9 +5,9 @@ logger = logging.getLogger(__name__)
 
 
 class MQTTService:
-    def __init__(self, subscription_topic=None, processor_callback=None):
+    def __init__(self, handler,subscription_topic=None, processor_callback=None):
         
-        self.mqtt = MQTTHandler()
+        self.mqtt = handler
         self.topic = subscription_topic
         self.processor_callback = processor_callback
         self._subscribed = False
