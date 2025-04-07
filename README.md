@@ -125,26 +125,7 @@ const defaultOptions = {
 1. Install required packages:
 
 ```bash
-pip install paho-mqtt msgpack certifi python-dotenv
-```
-
-2. Create a `.env` file in your project root:
-
-```bash
-# MQTT Broker Configuration
-MQTT_HOST=localhost
-MQTT_PORT=8883
-MQTT_TRANSPORT=websockets
-
-# Authentication (optional)
-MQTT_USERNAME=your-username
-MQTT_PASSWORD=your-password
-
-# Message Configuration
-ENCODING=msgpack
-
-# Topics Configuration
-RESULT_TOPIC=results/{slug}
+pip install paho-mqtt msgpack certifi
 ```
 
 ### Usage Example
@@ -154,12 +135,21 @@ from mqtt.python.handler import MQTTHandler
 from mqtt.python.service import MQTTService
 
 # Using the handler directly
-handler = MQTTHandler()
-handler.publish_result("my-topic", {"message": "Hello MQTT!"})
+handler = MQTTHandler(
+    host="localhost",
+    port=8883,
+    username="your-username",  # optional
+    password="your-password",  # optional
+    transport="websockets",    # optional, defaults to 'websockets'
+    encoding="msgpack"        # optional, defaults to 'msgpack'
+)
+
+# Publish a message
+handler.publish("my-topic", {"message": "Hello MQTT!"})
 
 # Using the service with a callback
-def process_message(data):
-    print(f"Received message: {data}")
+def process_message(topic, data):
+    print(f"Received message on {topic}: {data}")
 
 service = MQTTService(
     subscription_topic="my/topic/#",
@@ -168,19 +158,29 @@ service = MQTTService(
 service.run()
 ```
 
-### Python Environment Variables
+### Python Configuration
 
-| Variable       | Default        | Description                               |
-| -------------- | -------------- | ----------------------------------------- |
-| MQTT_HOST      | localhost      | MQTT broker hostname                      |
-| MQTT_PORT      | 8883           | MQTT broker port (default is TLS port)    |
-| MQTT_TRANSPORT | websockets     | Transport protocol (websockets or tcp)    |
-| MQTT_USERNAME  | ""             | Broker authentication username (optional) |
-| MQTT_PASSWORD  | ""             | Broker authentication password (optional) |
-| ENCODING       | msgpack        | Message encoding format (msgpack or json) |
-| RESULT_TOPIC   | results/{slug} | Topic format for results                  |
+The MQTTHandler can be configured through constructor parameters:
 
-All environment variables are optional and will fall back to their default values if not specified.
+| Parameter | Default    | Description                               |
+| --------- | ---------- | ----------------------------------------- |
+| host      | localhost  | MQTT broker hostname                      |
+| port      | 8883       | MQTT broker port (TLS enabled by default) |
+| transport | websockets | Transport protocol (websockets or tcp)    |
+| username  | ""         | Broker authentication username            |
+| password  | ""         | Broker authentication password            |
+| encoding  | msgpack    | Message encoding format (msgpack/json)    |
+
+All parameters are optional and will fall back to their default values if not specified. TLS/SSL is enabled by default using system certificates.
+
+### Key Features
+
+- Automatic message encoding/decoding (msgpack/JSON)
+- TLS/SSL support enabled by default
+- Automatic reconnection handling
+- Simple publish/subscribe interface
+- Service implementation for long-running subscribers
+- Callback-based message processing
 
 ## License
 

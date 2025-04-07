@@ -1,4 +1,3 @@
-# engine/mqtt/service.py
 import logging
 from .handler import MQTTHandler
 
@@ -58,37 +57,19 @@ class MQTTService:
     def on_message(self, client, userdata, msg):
         try:
             logger.info("Received message on topic: %s", msg.topic)
-
-            # Decode the message at the service level
             data = self.mqtt.decode_message(msg.payload)
             if data is None:
-                slug = msg.topic.split("/")[-1]
-                error_details = {
-                    "error": "Failed to decode payload",
-                    "topic": msg.topic,
-                    "slug": slug,
-                }
-                logger.error("Failed to decode message from %s: %s", msg.topic, error_details)
+                logger.error("Failed to decode message from %s", msg.topic)
                 return
 
-            # Send decoded data to the task
-            # processor callback
             if self.processor_callback:
                 self.processor_callback(msg.topic, data)
-                logger.info("Processed message with callback: %s", self.processor_callback)
+                logger.info("Processed message with callback")
+                self.message_count += 1
             else:
                 logger.info("No processor callback provided, skipping processing")
-                return
-            self.message_count += 1
-
         except Exception as e:
-            logger.error("Error forwarding message from %s: {str(%s)}", msg.topic, e)
-            slug = msg.topic.split("/")[-1]
-            self.mqtt.publish_error(
-                slug,
-                "message_forwarding_error",
-                {"error": str(e), "topic": msg.topic, "slug": slug},
-            )
+            logger.error("Error processing message from %s: %s", msg.topic, e)
 
     def run(self):
         try:
@@ -100,7 +81,7 @@ class MQTTService:
             logger.info("Shutting down MQTT service...")
             self._running = False
         except Exception as e:
-            logger.error("Error in MQTT service: {str(%s)}", e)
+            logger.error("Error in MQTT service: %s", str(e))
         finally:
             self._running = False
             self._subscribed = False

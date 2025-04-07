@@ -5,35 +5,37 @@ import certifi
 import json
 import msgpack
 import logging
-import os
 from time import time
-from dotenv import load_dotenv
+import uuid
 
-# Load environment variables
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 class MQTTHandler:
     """MQTT Handler for publishing and subscribing"""
 
-    # Class level constants from env vars with defaults
-    MQTT_HOST = os.getenv('MQTT_HOST', 'localhost')
-    MQTT_PORT = int(os.getenv('MQTT_PORT', "8883"))
-    MQTT_USERNAME = os.getenv('MQTT_USERNAME', '')
-    MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', '')
-    MQTT_TRANSPORT = os.getenv('MQTT_TRANSPORT', 'websockets')
-    ENCODING = os.getenv('ENCODING', 'msgpack')
-    RESULT_TOPIC = os.getenv('RESULT_TOPIC', 'results/{slug}')
-    ERROR_TOPIC = os.getenv('ERROR_TOPIC', 'errors/{slug}')
+    # Class level constants with defaults
+    _MQTT_HOST = 'localhost'
+    _MQTT_PORT = 8883
+    _MQTT_USERNAME = ''
+    _MQTT_PASSWORD = ''
+    _MQTT_TRANSPORT = 'websockets'
+    _ENCODING = 'msgpack'
+    
 
-    def __init__(self):
+    def __init__(self, host=None, port=None, username=None, password=None, transport=None, encoding=None, result_topic=None, error_topic=None):
+        self.MQTT_HOST = host or self._MQTT_HOST
+        self.MQTT_PORT = port or self._MQTT_PORT
+        self.MQTT_USERNAME = username or self._MQTT_USERNAME
+        self.MQTT_PASSWORD = password or self._MQTT_PASSWORD
+        self.MQTT_TRANSPORT = transport or self._MQTT_TRANSPORT
+        self.ENCODING = encoding or self._ENCODING
         self.client = self._setup_mqtt_client()
 
     def _setup_mqtt_client(self):
         """Setup MQTT client with basic configuration"""
-        client_id = f"gscorer_{os.getpid()}"
-        logger.info(f"Setting up MQTT client with ID: {client_id}")
+        client_id = str(uuid.uuid4())
+        logger.info("Setting up MQTT client with ID: %s", client_id)
 
         client = mqtt.Client(
             client_id=client_id,
@@ -61,7 +63,7 @@ class MQTTHandler:
             )
             logger.info("Connected to MQTT broker")
         except Exception as e:
-            logger.error(f"Failed to connect to MQTT broker: {e}")
+            logger.error("Failed to connect to MQTT broker: %s", e)
             raise
 
         return client
@@ -80,7 +82,7 @@ class MQTTHandler:
                     # Return as string if both decodings fail
                     return payload.decode("utf-8")
         except Exception as e:
-            logger.error(f"Failed to decode message: {e}")
+            logger.error("Failed to decode message: %s", e)
             return None
 
     def encode_message(self, data):
@@ -90,7 +92,7 @@ class MQTTHandler:
                 return msgpack.packb(data, use_bin_type=True)
             return json.dumps(data).encode()
         except Exception as e:
-            logger.error(f"Failed to encode message: {e}")
+            logger.error("Failed to encode message: %s", e)
             return None
 
     def loop(self, timeout=1.0):
@@ -132,35 +134,17 @@ class MQTTHandler:
         """Subscribe to a topic"""
         return self.client.subscribe(topic, qos)
 
-    def publish_result(self, slug, result, qos=0, retain=False):
-        """Publish successful result"""
+    def publish(self, topic, payload, qos=0, retain=False):
+        """Publish a message"""
         try:
-            topic = self.RESULT_TOPIC.format(slug=slug)
-            payload = self.encode_message(result)
-            if payload:
-                logger.info(f"Publishing result at {topic}")
-                return self.client.publish(topic, payload, qos=qos, retain=retain)
-            else:
-                raise ValueError("Failed to encode result payload")
+            encoded_payload = self.encode_message(payload)
+            if encoded_payload:
+                logger.info("Publishing message to %s", topic)
+                return self.client.publish(topic, encoded_payload, qos=qos, retain=retain)
+            raise ValueError("Failed to encode payload")
         except Exception as e:
-            logger.error(f"Error publishing result for {slug}: {e}")
-            return self.publish_error(
-                slug, "publish_error", {"error": str(e), "slug": slug}
-            )
-
-    def publish_error(self, slug, error_type, details, qos=0, retain=False):
-        """Publish error message"""
-        try:
-            topic = self.ERROR_TOPIC.format(slug=slug)
-            error_data = {"timestamp": time(), "type": error_type, "details": details}
-            payload = self.encode_message(error_data)
-            if payload:
-                logger.error(f"Publishing error: {error_type}")
-                return self.client.publish(topic, payload, qos=qos, retain=retain)
-            else:
-                logger.error(f"Failed to encode error payload: {error_data}")
-        except Exception as e:
-            logger.error(f"Failed to publish error message: {e}")
+            logger.error("Error publishing message to %s: %s", topic, e)
+            raise
 
     def __del__(self):
         """Cleanup when the handler is destroyed"""
