@@ -45,7 +45,6 @@ export function useMqtt(options = {}) {
   }
 
   function decodeMessage(raw) {
-    console.log('decodeMessage', raw.toString())
     // Attempt msgpack decode
     try {
       return mpDecode(raw)
@@ -69,7 +68,6 @@ export function useMqtt(options = {}) {
   // Check network status and update connection status if needed
   function checkNetworkStatus() {
     const isOnline = navigator.onLine
-    console.log('Network status check:', isOnline ? 'online' : 'offline')
 
     // Only update if status has changed
     if (isOnline !== lastNetworkStatus.value) {
