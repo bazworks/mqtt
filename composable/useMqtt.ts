@@ -42,6 +42,8 @@ export function useMqtt(serviceConfig: ServiceConfig, mqttOptions: IClientOption
 
   const messageListeners = new Set<(topic: string, payload: unknown) => void>()
 
+  let onReconnectedCallback: (() => void) | undefined
+
   const encodeMessage = (data: unknown): string | Buffer => {
     if (config.encoding === 'string') return String(data)
     if (config.encoding === 'json') return JSON.stringify(data)
@@ -132,7 +134,12 @@ export function useMqtt(serviceConfig: ServiceConfig, mqttOptions: IClientOption
   const reconnect = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!client.value) {
-        connect().then(resolve).catch(reject)
+        connect()
+          .then(() => {
+            onReconnectedCallback?.()
+            resolve()
+          })
+          .catch(reject)
         return
       }
 
@@ -147,7 +154,12 @@ export function useMqtt(serviceConfig: ServiceConfig, mqttOptions: IClientOption
           reject(err)
           return
         }
-        connect().then(resolve).catch(reject)
+        connect()
+          .then(() => {
+            onReconnectedCallback?.()
+            resolve()
+          })
+          .catch(reject)
       })
     })
   }
@@ -203,6 +215,10 @@ export function useMqtt(serviceConfig: ServiceConfig, mqttOptions: IClientOption
     messageListeners.add(callback)
   }
 
+  const onReconnected = (callback: () => void) => {
+    onReconnectedCallback = callback
+  }
+
   const removeMessageListener = (callback: (topic: string, payload: unknown) => void) => {
     messageListeners.delete(callback)
   }
@@ -239,5 +255,6 @@ export function useMqtt(serviceConfig: ServiceConfig, mqttOptions: IClientOption
     client,
     onDecodedMessage,
     removeMessageListener,
+    onReconnected,
   }
 }
