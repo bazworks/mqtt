@@ -159,11 +159,13 @@ export function useMqtt(options = {}) {
       })
 
       client.value.on('connect', () => {
+        console.log('mqtt client on connect')
         updateConnectionStatus(CONNECTION_STATUS.CONNECTED)
         connectionError.value = null
       })
 
       client.value.on('message', (topic, message) => {
+        console.log('mqtt client on message', topic, message)
         const decoded = decodeMessage(message)
         client.value.emit('decoded-message', topic, decoded)
       })
@@ -191,6 +193,7 @@ export function useMqtt(options = {}) {
       connectionError.value = error
       updateConnectionStatus(CONNECTION_STATUS.ERROR)
     }
+    console.log('mqtt client connected', client.value)
   }
 
   // Explicitly trigger reconnection
